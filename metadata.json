@@ -1,6 +1,6 @@
 {
-  "name": "베스트누수설비",
-  "description": "연한 그린 톤의 신뢰감 있는 누수탐지 및 종합설비 전문 업체 베스트누수설비의 브랜드 랜딩페이지",
+  "name": "지앤지클린",
+  "description": "연한 블루 톤의 프리미엄 첨단 누수탐지 및 종합 배관 설비 전문 업체 지앤지클린의 브랜드 랜딩페이지",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
