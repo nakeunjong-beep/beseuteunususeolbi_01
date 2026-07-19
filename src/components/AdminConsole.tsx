@@ -143,12 +143,43 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
     }
   }, [isOpen]);
 
+  const compressImage = (base64Str: string, maxWidth = 1200, quality = 0.75): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressed);
+        } else {
+          resolve(base64Str);
+        }
+      };
+      img.onerror = () => {
+        resolve(base64Str);
+      };
+    });
+  };
+
   const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2.5 * 1024 * 1024) {
-      alert('이미지 파일 크기가 너무 큽니다. 2.5MB 이하의 이미지를 사용해 주세요.');
+    if (file.size > 5.0 * 1024 * 1024) {
+      alert('이미지 파일 크기가 너무 큽니다. 5MB 이하의 이미지를 사용해 주세요.');
       return;
     }
 
@@ -156,26 +187,29 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
     reader.onload = async (event) => {
       const base64String = event.target?.result as string;
       if (base64String) {
-        localStorage.setItem('custom_banner_image', base64String);
-        setCustomBannerImage(base64String);
+        setStatusMessage({ text: '배너 이미지를 최적화 및 압축하는 중...', isError: false });
+        
+        // Compress base64 to fit comfortably under Firestore's 1MB limit for seamless cross-device sync!
+        const compressedBase64 = await compressImage(base64String);
+
+        localStorage.setItem('custom_banner_image', compressedBase64);
+        setCustomBannerImage(compressedBase64);
         localStorage.setItem('show_custom_banner', 'true');
         setShowCustomBanner(true);
         window.dispatchEvent(new Event('bannerChanged'));
         
-        setStatusMessage({ text: '배너 이미지가 성공적으로 업로드 및 적용되었습니다!', isError: false });
+        setStatusMessage({ text: '배너 이미지가 성공적으로 업로드 및 동기화되었습니다!', isError: false });
         setTimeout(() => setStatusMessage(null), 3000);
 
         // Sync to Firestore
         try {
           await setDoc(doc(db, 'configs', 'banner'), {
-            customBannerImage: base64String,
+            customBannerImage: compressedBase64,
             showCustomBanner: true
           });
         } catch (err: any) {
           console.error('Failed to sync to Firestore:', err);
-          if (file.size > 500 * 1024) {
-            alert('⚠️ 알림: 업로드하신 배너 크기가 커서 클라우드 동기화(1MB 제한)에 실패했습니다. 데스크톱에서는 보이지만 모바일 등 다른 기기에서는 보이지 않을 수 있습니다. 500KB 이하의 이미지 파일을 사용하시거나, 아래의 "배너 이미지 주소(URL) 직접 입력" 기능을 권장합니다!');
-          }
+          alert('⚠️ 알림: 클라우드 동기화에 실패했습니다. 현재 기기에는 반영되었으나 모바일 기기 등에 동기화되지 않았을 수 있습니다.');
         }
       }
     };
