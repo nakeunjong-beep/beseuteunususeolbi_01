@@ -346,9 +346,9 @@ export default function App() {
       try {
         const fetchPromise = fetch(appsScriptUrl, {
           method: 'POST',
-          mode: 'cors',
+          mode: 'no-cors', // Avoid preflight CORS issues with Google Apps Script
           headers: {
-            'Content-Type': 'text/plain', // Avoid preflight CORS trigger in Apps Script
+            'Content-Type': 'text/plain',
           },
           body: JSON.stringify({
             name: submission.name,
@@ -364,12 +364,10 @@ export default function App() {
           setTimeout(() => reject(new Error('Google Apps Script request timed out')), 5000)
         );
 
-        const response = await Promise.race([fetchPromise, timeoutPromise]);
-        const resData = await response.json();
-        if (resData.result === 'success') {
-          syncedToSheets = true;
-          emailSent = true;
-        }
+        await Promise.race([fetchPromise, timeoutPromise]);
+        // Since 'no-cors' returns an opaque response, we assume successful transmission once fetch completes without timing out.
+        syncedToSheets = true;
+        emailSent = true;
       } catch (err) {
         console.error('Google Apps Script submission failed or timed out, will save locally:', err);
       }
