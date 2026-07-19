@@ -1,0 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Outfit:wght@400;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Noto Sans KR", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", "Noto Sans KR", sans-serif;
+}
+
+/* Custom CSS to smooth animations and scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #fcfdfc;
+  color: #1c2a1e;
+}
