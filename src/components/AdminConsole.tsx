@@ -13,6 +13,8 @@ import {
   orderBy,
   doc,
   updateDoc,
+  getDoc,
+  setDoc,
   type User
 } from '../lib/firebase';
 import { 
@@ -67,6 +69,7 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
   const [customBannerImage, setCustomBannerImage] = useState<string>(() => {
     return localStorage.getItem('custom_banner_image') || '';
   });
+  const [customBannerUrlInput, setCustomBannerUrlInput] = useState<string>('');
 
   // Google Apps Script Direct Integration states
   const [useAppsScript, setUseAppsScript] = useState<boolean>(() => {
@@ -113,6 +116,33 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
     }
   };
 
+  // Fetch Cloud custom banner from Firestore to sync on mount/open
+  useEffect(() => {
+    const fetchCloudBanner = async () => {
+      try {
+        const docRef = doc(db, 'configs', 'banner');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.customBannerImage) {
+            setCustomBannerImage(data.customBannerImage);
+            setCustomBannerUrlInput(data.customBannerImage.startsWith('data:') ? '' : data.customBannerImage);
+            localStorage.setItem('custom_banner_image', data.customBannerImage);
+          }
+          if (data.showCustomBanner !== undefined) {
+            setShowCustomBanner(data.showCustomBanner);
+            localStorage.setItem('show_custom_banner', String(data.showCustomBanner));
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load global custom banner from Firestore in AdminConsole:', err);
+      }
+    };
+    if (isOpen) {
+      fetchCloudBanner();
+    }
+  }, [isOpen]);
+
   const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -123,7 +153,7 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
     }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const base64String = event.target?.result as string;
       if (base64String) {
         localStorage.setItem('custom_banner_image', base64String);
@@ -131,31 +161,96 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
         localStorage.setItem('show_custom_banner', 'true');
         setShowCustomBanner(true);
         window.dispatchEvent(new Event('bannerChanged'));
+        
         setStatusMessage({ text: '배너 이미지가 성공적으로 업로드 및 적용되었습니다!', isError: false });
         setTimeout(() => setStatusMessage(null), 3000);
+
+        // Sync to Firestore
+        try {
+          await setDoc(doc(db, 'configs', 'banner'), {
+            customBannerImage: base64String,
+            showCustomBanner: true
+          });
+        } catch (err: any) {
+          console.error('Failed to sync to Firestore:', err);
+          if (file.size > 500 * 1024) {
+            alert('⚠️ 알림: 업로드하신 배너 크기가 커서 클라우드 동기화(1MB 제한)에 실패했습니다. 데스크톱에서는 보이지만 모바일 등 다른 기기에서는 보이지 않을 수 있습니다. 500KB 이하의 이미지 파일을 사용하시거나, 아래의 "배너 이미지 주소(URL) 직접 입력" 기능을 권장합니다!');
+          }
+        }
       }
     };
     reader.readAsDataURL(file);
   };
 
-  const handleToggleBanner = () => {
+  const handleSaveBannerUrl = async () => {
+    if (!customBannerUrlInput) {
+      alert('이미지 주소(URL)를 입력해 주세요.');
+      return;
+    }
+    if (!customBannerUrlInput.startsWith('http://') && !customBannerUrlInput.startsWith('https://') && !customBannerUrlInput.startsWith('data:')) {
+      alert('올바른 인터넷 주소(http:// 또는 https://) 형식이어야 합니다.');
+      return;
+    }
+
+    localStorage.setItem('custom_banner_image', customBannerUrlInput);
+    setCustomBannerImage(customBannerUrlInput);
+    localStorage.setItem('show_custom_banner', 'true');
+    setShowCustomBanner(true);
+    window.dispatchEvent(new Event('bannerChanged'));
+    
+    setStatusMessage({ text: '입력하신 주소 배너가 성공적으로 적용되었습니다!', isError: false });
+    setTimeout(() => setStatusMessage(null), 3000);
+
+    // Save to Firestore
+    try {
+      await setDoc(doc(db, 'configs', 'banner'), {
+        customBannerImage: customBannerUrlInput,
+        showCustomBanner: true
+      });
+    } catch (err) {
+      console.error('Failed to sync banner URL to Firestore:', err);
+    }
+  };
+
+  const handleToggleBanner = async () => {
     const newValue = !showCustomBanner;
     localStorage.setItem('show_custom_banner', String(newValue));
     setShowCustomBanner(newValue);
     window.dispatchEvent(new Event('bannerChanged'));
     setStatusMessage({ text: newValue ? '업로드된 이미지 배너가 활성화되었습니다.' : '기본 인터랙티브 배너로 변경되었습니다.', isError: false });
     setTimeout(() => setStatusMessage(null), 3000);
+
+    // Save to Firestore
+    try {
+      await setDoc(doc(db, 'configs', 'banner'), {
+        customBannerImage,
+        showCustomBanner: newValue
+      });
+    } catch (err) {
+      console.error('Failed to sync toggle to Firestore:', err);
+    }
   };
 
-  const handleClearBanner = () => {
+  const handleClearBanner = async () => {
     if (confirm('업로드된 배너 이미지를 삭제하시겠습니까?')) {
       localStorage.removeItem('custom_banner_image');
       localStorage.setItem('show_custom_banner', 'false');
       setCustomBannerImage('');
       setShowCustomBanner(false);
+      setCustomBannerUrlInput('');
       window.dispatchEvent(new Event('bannerChanged'));
       setStatusMessage({ text: '업로드된 배너가 삭제되었습니다.', isError: false });
       setTimeout(() => setStatusMessage(null), 3000);
+
+      // Clear from Firestore configs
+      try {
+        await setDoc(doc(db, 'configs', 'banner'), {
+          customBannerImage: '',
+          showCustomBanner: false
+        });
+      } catch (err) {
+        console.error('Failed to clear banner from Firestore:', err);
+      }
     }
   };
 
@@ -845,7 +940,7 @@ function doGet(e) {
 
               <div className="space-y-4">
                 <p className="text-xs text-gray-500 leading-relaxed font-medium">
-                  카카오톡이나 문자 등으로 전달받으신 원본 배너 이미지를 이곳에 직접 업로드하여 홈페이지 최상단 메인 이미지로 간편하게 교체할 수 있습니다.
+                  배너 이미지를 직접 업로드하거나 아래에서 인터넷 주소(URL)를 직접 입력하여 홈페이지 최상단 메인 이미지로 교체할 수 있습니다. (URL 입력 시 모바일 기기와 즉시 자동 동기화됩니다.)
                 </p>
 
                 {/* Upload Area */}
@@ -912,6 +1007,31 @@ function doGet(e) {
                     </label>
                   </div>
                 )}
+
+                {/* Direct Image URL input option for Cross-device seamless synchronization */}
+                <div className="pt-3 border-t border-gray-100 space-y-1.5">
+                  <label className="text-[11px] font-black text-gray-600 block">
+                    또는 인터넷 이미지 주소(URL) 직접 입력 (추천)
+                  </label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      placeholder="https://example.com/image.jpg"
+                      value={customBannerUrlInput}
+                      onChange={(e) => setCustomBannerUrlInput(e.target.value)}
+                      className="flex-1 bg-[#fcfcfc] border border-gray-200 focus:border-[#2e7d32] focus:ring-2 focus:ring-[#2e7d32]/10 rounded-lg px-2.5 py-2 text-xs outline-none font-mono"
+                    />
+                    <button
+                      onClick={handleSaveBannerUrl}
+                      className="bg-[#2e7d32] hover:bg-[#1b5e20] text-white px-3 py-2 rounded-lg text-xs font-black transition-all cursor-pointer shrink-0"
+                    >
+                      적용
+                    </button>
+                  </div>
+                  <p className="text-[9px] text-gray-400 font-medium leading-relaxed">
+                    💡 이미지를 블로그, 드라이브 또는 외부 이미지 호스팅 등에 올린 뒤 주소를 붙여넣으면, 용량 걱정 없이 모바일 등 모든 기기에서 즉시 연동됩니다.
+                  </p>
+                </div>
               </div>
             </div>
 

@@ -16,6 +16,8 @@ import {
   orderBy, 
   doc, 
   updateDoc, 
+  getDoc,
+  setDoc,
   serverTimestamp,
   type DocumentData
 } from 'firebase/firestore';
@@ -47,6 +49,8 @@ export {
   orderBy, 
   doc, 
   updateDoc, 
+  getDoc,
+  setDoc,
   serverTimestamp,
   type User,
   type DocumentData

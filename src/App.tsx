@@ -45,7 +45,7 @@ import {
   ServiceItem,
   DiagnosisCase
 } from './data';
-import { db, collection, addDoc, doc, updateDoc } from './lib/firebase';
+import { db, collection, addDoc, doc, updateDoc, getDoc } from './lib/firebase';
 import { appendRowToGoogleSheet, sendGmailNotification, type SubmissionData } from './lib/googleApi';
 import AdminConsole from './components/AdminConsole';
 
@@ -219,6 +219,28 @@ export default function App() {
   });
 
   useEffect(() => {
+    // 1. Fetch Cloud custom banner from Firestore to sync across devices (e.g. mobile/desktop)
+    const fetchCloudBanner = async () => {
+      try {
+        const docRef = doc(db, 'configs', 'banner');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.customBannerImage) {
+            setCustomBannerImage(data.customBannerImage);
+            localStorage.setItem('custom_banner_image', data.customBannerImage);
+          }
+          if (data.showCustomBanner !== undefined) {
+            setShowCustomBanner(data.showCustomBanner);
+            localStorage.setItem('show_custom_banner', String(data.showCustomBanner));
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load global custom banner from Firestore:', err);
+      }
+    };
+    fetchCloudBanner();
+
     const handleBannerChange = () => {
       setShowCustomBanner(localStorage.getItem('show_custom_banner') === 'true');
       setCustomBannerImage(localStorage.getItem('custom_banner_image') || '');
@@ -337,7 +359,7 @@ export default function App() {
 
     // 3. Attempt direct background sync if Google Apps Script is active, otherwise fallback to legacy Google Auth
     const useAppsScript = localStorage.getItem('use_apps_script') !== 'false';
-    const appsScriptUrl = localStorage.getItem('apps_script_url') || '';
+    const appsScriptUrl = localStorage.getItem('apps_script_url') || 'https://script.google.com/macros/s/AKfycbwXJ8c0vwXip4QnZ2gvf2-VfovZM9nZ_aTf6HJdM0ETH0cAlIQP73J6sOpwijVsdQ/exec';
     
     let syncedToSheets = false;
     let emailSent = false;
@@ -346,7 +368,7 @@ export default function App() {
       try {
         const fetchPromise = fetch(appsScriptUrl, {
           method: 'POST',
-          mode: 'no-cors', // Avoid preflight CORS issues with Google Apps Script
+          mode: 'cors', // Align with AdminConsole test to handle response and support CORS
           headers: {
             'Content-Type': 'text/plain',
           },
@@ -364,10 +386,16 @@ export default function App() {
           setTimeout(() => reject(new Error('Google Apps Script request timed out')), 5000)
         );
 
-        await Promise.race([fetchPromise, timeoutPromise]);
-        // Since 'no-cors' returns an opaque response, we assume successful transmission once fetch completes without timing out.
-        syncedToSheets = true;
-        emailSent = true;
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        const res = await response.json();
+        if (res && res.result === 'success') {
+          syncedToSheets = true;
+          emailSent = true;
+        } else {
+          // If we got a response but result wasn't success, try to fallback to true if response was ok
+          syncedToSheets = response.ok;
+          emailSent = response.ok;
+        }
       } catch (err) {
         console.error('Google Apps Script submission failed or timed out, will save locally:', err);
       }
@@ -578,7 +606,7 @@ export default function App() {
                   {/* Floating badge for plumber */}
                   <div className="mt-4 bg-emerald-800 text-white font-black text-xs px-3.5 py-1.5 rounded-full shadow-md tracking-wider flex items-center gap-1.5 animate-bounce" style={{ animationDuration: '3s' }}>
                     <Wrench className="w-3 h-3 text-emerald-300" />
-                    <span>김동현 대표 엔지니어</span>
+                    <span>박중현 대표 엔지니어</span>
                   </div>
                 </div>
 
