@@ -68,6 +68,51 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
     return localStorage.getItem('custom_banner_image') || '';
   });
 
+  // Google Apps Script Direct Integration states
+  const [useAppsScript, setUseAppsScript] = useState<boolean>(() => {
+    return localStorage.getItem('use_apps_script') !== 'false';
+  });
+  const [appsScriptUrl, setAppsScriptUrl] = useState<string>(() => {
+    return localStorage.getItem('apps_script_url') || 'https://script.google.com/macros/s/AKfycbwXJ8c0vwXip4QnZ2gvf2-VfovZM9nZ_aTf6HJdM0ETH0cAlIQP73J6sOpwijVsdQ/exec';
+  });
+
+  const handleTestAppsScript = async () => {
+    if (!appsScriptUrl) {
+      showStatus('먼저 아래 입력창에 웹 앱 URL을 입력하고 저장해 주세요.', true);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const testData = {
+        name: '테스트(동해번쩍)',
+        phone: '010-1234-5678',
+        service: '누수 정밀 탐지',
+        urgency: '🚨 매우 긴급 (30분 이내 출동 필요)',
+        notes: '이것은 구글 스프레드시트 및 이메일 연동 테스트입니다.',
+        timestamp: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) + ' (테스트)'
+      };
+      const response = await fetch(appsScriptUrl, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'text/plain'
+        },
+        body: JSON.stringify(testData)
+      });
+      const res = await response.json();
+      if (res.result === 'success') {
+        showStatus('🎉 연동 성공! 구글 스프레드시트에 테스트 데이터가 추가되었고 nakeunjong@gmail.com으로 메일이 전송되었습니다.', false);
+      } else {
+        showStatus(`연동 에러 발생: ${res.error || '알 수 없는 오류'}`, true);
+      }
+    } catch (err: any) {
+      console.error(err);
+      showStatus(`연동 테스트 실패: URL이 잘못되었거나 권한 설정(모든 사용자)이 덜 되었을 수 있습니다. 상세: ${err.message}`, true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -308,6 +353,47 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
     }
   };
 
+  // Manual Row Sync via Apps Script
+  const handleManualSyncAppsScript = async (sub: SubmissionData) => {
+    if (!appsScriptUrl) {
+      showStatus('먼저 좌측 입력창에 웹 앱 URL을 입력해 주세요.', true);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await fetch(appsScriptUrl, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'text/plain'
+        },
+        body: JSON.stringify({
+          name: sub.name,
+          phone: sub.phone,
+          service: sub.service,
+          urgency: sub.urgency,
+          notes: sub.notes,
+          timestamp: sub.timestamp
+        })
+      });
+      const res = await response.json();
+      if (res.result === 'success') {
+        await markAsSynced(sub, 'syncedToSheets');
+        await markAsSynced(sub, 'emailSent');
+        showStatus(`${sub.name}님의 예약 내역을 구글 시트 및 메일로 성공적으로 전송했습니다!`, false);
+        // Refresh local view
+        fetchAllSubmissions();
+      } else {
+        showStatus(`전송 에러 발생: ${res.error || '알 수 없는 오류'}`, true);
+      }
+    } catch (err: any) {
+      console.error(err);
+      showStatus(`전송 실패: ${err.message}`, true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Mark submission state
   const markAsSynced = async (sub: SubmissionData, field: 'syncedToSheets' | 'emailSent') => {
     // 1. Update in Firestore if id exists
@@ -448,111 +534,307 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
           {/* Left panel: Auth & Spreadsheet Setup */}
           <div className="w-full lg:w-80 flex flex-col gap-5 shrink-0">
             
-            {/* Account Card */}
-            <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
-              <h4 className="text-sm font-black text-gray-800 mb-3 flex items-center gap-1.5">
-                <Lock className="w-4 h-4 text-[#2e7d32]" />
-                구글 관리자 계정 연동
+            {/* Integration Mode Card */}
+            <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs space-y-4">
+              <h4 className="text-sm font-black text-gray-800 flex items-center gap-1.5 border-b border-gray-50 pb-2">
+                <Settings className="w-4 h-4 text-[#2e7d32]" />
+                연동 엔진 선택
               </h4>
               
-              {!user ? (
-                <div className="space-y-3">
-                  <p className="text-xs text-gray-500 leading-relaxed font-medium">
-                    예약 접수 데이터를 <strong>구글 시트</strong>에 저장하고, <strong>nakeunjong@gmail.com</strong>으로 즉시 메일을 발송하려면 구글 권한 인증이 필수입니다.
-                  </p>
-                  <button
-                    onClick={handleGoogleSignIn}
-                    disabled={isLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 active:scale-98 text-gray-700 py-3.5 px-4 rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer"
-                  >
-                    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                    </svg>
-                    <span>Google 계정으로 연동하기</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="bg-[#f1f8f3] p-3 rounded-xl border border-[#a5d6a7]/40 flex items-center gap-3">
-                    <img 
-                      src={user.photoURL || undefined} 
-                      alt="profile" 
-                      className="w-10 h-10 rounded-full border border-[#a5d6a7]"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="overflow-hidden">
-                      <div className="font-extrabold text-xs text-[#1b4332] truncate">{user.displayName || '관리자'}</div>
-                      <div className="text-[10px] text-gray-500 font-mono truncate">{user.email}</div>
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <button
-                      onClick={handleSignOut}
-                      className="inline-flex items-center gap-1 text-xs text-red-600 font-bold hover:underline"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                      계정 연동 해제
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Sheets Link Config */}
-            <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
-              <h4 className="text-sm font-black text-gray-800 mb-3 flex items-center gap-1.5">
-                <FileSpreadsheet className="w-4 h-4 text-[#2e7d32]" />
-                구글 스프레드시트 설정
-              </h4>
-              
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-black text-gray-600 block">연동된 구글시트 ID</label>
-                  <input
-                    type="text"
-                    placeholder="스프레드시트 ID 또는 새로 생성하세요"
-                    value={spreadsheetId}
-                    onChange={(e) => {
-                      setSpreadsheetId(e.target.value);
-                      localStorage.setItem('admin_spreadsheet_id', e.target.value);
-                    }}
-                    className="w-full bg-[#fcfcfc] border border-gray-200 focus:border-[#2e7d32] focus:ring-2 focus:ring-[#2e7d32]/10 rounded-lg px-3 py-2 text-xs font-mono outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-black text-gray-600 block">시트 이름</label>
-                  <input
-                    type="text"
-                    placeholder="예약접수목록"
-                    value={sheetName}
-                    onChange={(e) => {
-                      setSheetName(e.target.value);
-                      localStorage.setItem('admin_sheet_name', e.target.value);
-                    }}
-                    className="w-full bg-[#fcfcfc] border border-gray-200 focus:border-[#2e7d32] focus:ring-2 focus:ring-[#2e7d32]/10 rounded-lg px-3 py-2 text-xs outline-none"
-                  />
-                </div>
-
-                {user && (
-                  <button
-                    onClick={handleCreateSheet}
-                    disabled={isLoading}
-                    className="w-full flex items-center justify-center gap-1 bg-[#e8f5e9] text-[#1b5e20] hover:bg-[#c8e6c9] border border-[#a5d6a7]/40 py-2 rounded-lg text-xs font-black transition-all cursor-pointer"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5" />
-                    새 접수 전용 구글시트 자동생성
-                  </button>
-                )}
-
-                <div className="text-[10px] text-gray-400 font-medium leading-relaxed bg-[#fafafa] p-2.5 rounded-lg border border-gray-100">
-                  💡 직접 스프레드시트의 주소 창 중 <span className="font-mono text-gray-600">/d/<b>[이부분]</b>/edit</span>에 있는 긴 문자열을 복사해서 붙여넣어도 정상 작동합니다.
-                </div>
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-100/80 rounded-xl">
+                <button
+                  onClick={() => {
+                    setUseAppsScript(true);
+                    localStorage.setItem('use_apps_script', 'true');
+                  }}
+                  className={`py-2 px-1 text-center text-[11px] font-black rounded-lg transition-all cursor-pointer ${
+                    useAppsScript 
+                      ? 'bg-[#2e7d32] text-white shadow-xs' 
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  구글 앱스 스크립트 (추천)
+                </button>
+                <button
+                  onClick={() => {
+                    setUseAppsScript(false);
+                    localStorage.setItem('use_apps_script', 'false');
+                  }}
+                  className={`py-2 px-1 text-center text-[11px] font-black rounded-lg transition-all cursor-pointer ${
+                    !useAppsScript 
+                      ? 'bg-[#2e7d32] text-white shadow-xs' 
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  기존 구글 로그인 (복잡)
+                </button>
               </div>
             </div>
+
+            {useAppsScript ? (
+              /* Google Apps Script Direct Mode */
+              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-black text-gray-800 flex items-center gap-1.5">
+                    <FileSpreadsheet className="w-4 h-4 text-[#2e7d32]" />
+                    앱스 스크립트 연동 정보
+                  </h4>
+                  <span className="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">Free & Simple</span>
+                </div>
+
+                <div className="space-y-3.5">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-black text-gray-600 block">Google Apps Script 웹 앱 URL</label>
+                    <input
+                      type="text"
+                      placeholder="https://script.google.com/macros/s/..."
+                      value={appsScriptUrl}
+                      onChange={(e) => {
+                        setAppsScriptUrl(e.target.value);
+                        localStorage.setItem('apps_script_url', e.target.value);
+                      }}
+                      className="w-full bg-[#fcfcfc] border border-gray-200 focus:border-[#2e7d32] focus:ring-2 focus:ring-[#2e7d32]/10 rounded-lg px-3 py-2.5 text-xs font-mono outline-none"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleTestAppsScript}
+                    disabled={isLoading}
+                    className="w-full flex items-center justify-center gap-1.5 bg-[#e8f5e9] hover:bg-[#c8e6c9] border border-[#a5d6a7]/40 text-[#1b5e20] py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                    연동 테스트 데이터 1건 전송
+                  </button>
+
+                  {/* Copy Script Code Block */}
+                  <div className="space-y-2 pt-2 border-t border-gray-50">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-black text-gray-700">복사할 구글 스크립트 코드</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    
+    // 1. 구글 시트에 내용 기록
+    sheet.appendRow([
+      data.timestamp || new Date().toLocaleString("ko-KR", {timeZone: "Asia/Seoul"}),
+      data.name,
+      data.phone,
+      data.service,
+      data.urgency,
+      data.notes || "없음"
+    ]);
+    
+    // 2. nakeunjong@gmail.com 메일로 실시간 예약 알림 발송
+    MailApp.sendEmail({
+      to: "nakeunjong@gmail.com",
+      subject: "[베스트누수설비] " + data.name + " 고객님 새 문의 접수!",
+      htmlBody: "<h3>실시간 간편 상담 신청 내역</h3>" +
+                "<p><b>신청시간:</b> " + (data.timestamp || new Date().toLocaleString("ko-KR", {timeZone: "Asia/Seoul"})) + "</p>" +
+                "<p><b>고객성함:</b> " + data.name + "</p>" +
+                "<p><b>전화번호:</b> " + data.phone + "</p>" +
+                "<p><b>선택서비스:</b> " + data.service + "</p>" +
+                "<p><b>긴급상황:</b> " + data.urgency + "</p>" +
+                "<p><b>상세 요청사항:</b> " + (data.notes || "없음") + "</p>" +
+                "<br><p>※ 이 메일은 Google Apps Script를 통해 자동 발송되었습니다.</p>"
+    });
+    
+    return ContentService.createTextOutput(JSON.stringify({ result: "success" }))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeader("Access-Control-Allow-Origin", "*");
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ result: "error", error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeader("Access-Control-Allow-Origin", "*");
+  }
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({ result: "active" }))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader("Access-Control-Allow-Origin", "*");
+}`);
+                          alert('앱스 스크립트 코드가 클립보드에 복사되었습니다!');
+                        }}
+                        className="text-[10px] text-[#2e7d32] hover:underline font-black cursor-pointer bg-emerald-50 px-2 py-0.5 rounded"
+                      >
+                        코드 전체 복사
+                      </button>
+                    </div>
+
+                    <pre className="w-full max-h-36 overflow-y-auto bg-gray-50 border border-gray-100 rounded-lg p-2.5 text-[9px] font-mono text-gray-500 leading-normal">
+{`function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    sheet.appendRow([
+      data.timestamp || new Date().toLocaleString("ko-KR", {timeZone: "Asia/Seoul"}),
+      data.name,
+      data.phone,
+      data.service,
+      data.urgency,
+      data.notes || "없음"
+    ]);
+    
+    MailApp.sendEmail({
+      to: "nakeunjong@gmail.com",
+      subject: "[베스트누수설비] " + data.name + " 고객님 새 문의 접수!",
+      htmlBody: "<h3>실시간 간편 상담 신청 내역</h3>" +
+                "<p><b>신청시간:</b> " + (data.timestamp || new Date().toLocaleString("ko-KR", {timeZone: "Asia/Seoul"})) + "</p>" +
+                "<p><b>고객성함:</b> " + data.name + "</p>" +
+                "<p><b>전화번호:</b> " + data.phone + "</p>" +
+                "<p><b>선택서비스:</b> " + data.service + "</p>" +
+                "<p><b>긴급상황:</b> " + data.urgency + "</p>" +
+                "<p><b>상세 요청사항:</b> " + (data.notes || "없음") + "</p>" +
+                "<br><p>※ 이 메일은 Google Apps Script를 통해 자동 발송되었습니다.</p>"
+    });
+    return ContentService.createTextOutput(JSON.stringify({ result: "success" }))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeader("Access-Control-Allow-Origin", "*");
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ result: "error", error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeader("Access-Control-Allow-Origin", "*");
+  }
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({ result: "active" }))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader("Access-Control-Allow-Origin", "*");
+}`}
+                    </pre>
+                  </div>
+
+                  {/* Steps Guide */}
+                  <div className="bg-[#fafafa] p-3 rounded-xl border border-gray-100 text-[10px] text-gray-500 space-y-1 leading-relaxed">
+                    <div className="font-extrabold text-gray-700 text-[11px] mb-1">💡 초간단 연동 방법 (5분 완료)</div>
+                    <div>1. 내 구글 드라이브에서 <b>새 구글 스프레드시트</b>를 만듭니다.</div>
+                    <div>2. 시트의 상단 메뉴에서 <b>확장 프로그램</b> &gt; <b>Apps Script</b>를 클릭합니다.</div>
+                    <div>3. 기존에 적혀있는 기본 코드를 모두 지우고 위의 <b>[코드 전체 복사]</b>를 눌러 그대로 붙여넣습니다.</div>
+                    <div>4. 우측 상단의 <b>[배포] &gt; [새 배포]</b>를 누릅니다.</div>
+                    <div>5. 왼쪽 톱니바퀴에서 유형을 <b>[웹 앱]</b>으로 선택합니다.</div>
+                    <div>6. 설정 항목:</div>
+                    <div className="pl-3 font-semibold text-gray-700">· 다음 사용자 명의로 실행: <b>나</b></div>
+                    <div className="pl-3 font-semibold text-gray-700">· 액세스할 수 있는 사용자: <b>모든 사용자</b></div>
+                    <div>7. 파란색 <b>[배포]</b> 버튼을 누르고, 액세스 승인(내 계정 선택 - 고급 - 안전하지 않음으로 이동 클릭 - 허용)을 완료합니다.</div>
+                    <div>8. 완료 후 발급된 <b>[웹 앱 URL]</b>을 위 입력창에 붙여넣으면 끝입니다!</div>
+                  </div>
+
+                </div>
+              </div>
+            ) : (
+              /* Legacy Firebase / Google Auth Mode */
+              <>
+                {/* Account Card */}
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
+                  <h4 className="text-sm font-black text-gray-800 mb-3 flex items-center gap-1.5">
+                    <Lock className="w-4 h-4 text-[#2e7d32]" />
+                    구글 관리자 계정 연동 (구글 로그인)
+                  </h4>
+                  
+                  {!user ? (
+                    <div className="space-y-3">
+                      <p className="text-xs text-gray-500 leading-relaxed font-medium">
+                        예약 접수 데이터를 <strong>구글 시트</strong>에 저장하고, <strong>nakeunjong@gmail.com</strong>으로 즉시 메일을 발송하려면 구글 권한 인증이 필수입니다.
+                      </p>
+                      <button
+                        onClick={handleGoogleSignIn}
+                        disabled={isLoading}
+                        className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 active:scale-98 text-gray-700 py-3.5 px-4 rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer"
+                      >
+                        <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                        </svg>
+                        <span>Google 계정으로 연동하기</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="bg-[#f1f8f3] p-3 rounded-xl border border-[#a5d6a7]/40 flex items-center gap-3">
+                        <img 
+                          src={user.photoURL || undefined} 
+                          alt="profile" 
+                          className="w-10 h-10 rounded-full border border-[#a5d6a7]"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="overflow-hidden">
+                          <div className="font-extrabold text-xs text-[#1b4332] truncate">{user.displayName || '관리자'}</div>
+                          <div className="text-[10px] text-gray-500 font-mono truncate">{user.email}</div>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <button
+                          onClick={handleSignOut}
+                          className="inline-flex items-center gap-1 text-xs text-red-600 font-bold hover:underline"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          계정 연동 해제
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Sheets Link Config */}
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
+                  <h4 className="text-sm font-black text-gray-800 mb-3 flex items-center gap-1.5">
+                    <FileSpreadsheet className="w-4 h-4 text-[#2e7d32]" />
+                    구글 스프레드시트 설정
+                  </h4>
+                  
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-black text-gray-600 block">연동된 구글시트 ID</label>
+                      <input
+                        type="text"
+                        placeholder="스프레드시트 ID 또는 새로 생성하세요"
+                        value={spreadsheetId}
+                        onChange={(e) => {
+                          setSpreadsheetId(e.target.value);
+                          localStorage.setItem('admin_spreadsheet_id', e.target.value);
+                        }}
+                        className="w-full bg-[#fcfcfc] border border-gray-200 focus:border-[#2e7d32] focus:ring-2 focus:ring-[#2e7d32]/10 rounded-lg px-3 py-2 text-xs font-mono outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-black text-gray-600 block">시트 이름</label>
+                      <input
+                        type="text"
+                        placeholder="예약접수목록"
+                        value={sheetName}
+                        onChange={(e) => {
+                          setSheetName(e.target.value);
+                          localStorage.setItem('admin_sheet_name', e.target.value);
+                        }}
+                        className="w-full bg-[#fcfcfc] border border-gray-200 focus:border-[#2e7d32] focus:ring-2 focus:ring-[#2e7d32]/10 rounded-lg px-3 py-2 text-xs outline-none"
+                      />
+                    </div>
+
+                    {user && (
+                      <button
+                        onClick={handleCreateSheet}
+                        disabled={isLoading}
+                        className="w-full flex items-center justify-center gap-1 bg-[#e8f5e9] text-[#1b5e20] hover:bg-[#c8e6c9] border border-[#a5d6a7]/40 py-2 rounded-lg text-xs font-black transition-all cursor-pointer"
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5" />
+                        새 접수 전용 구글시트 자동생성
+                      </button>
+                    )}
+
+                    <div className="text-[10px] text-gray-400 font-medium leading-relaxed bg-[#fafafa] p-2.5 rounded-lg border border-gray-100">
+                      💡 직접 스프레드시트의 주소 창 중 <span className="font-mono text-gray-600">/d/<b>[이부분]</b>/edit</span>에 있는 긴 문자열을 복사해서 붙여넣어도 정상 작동합니다.
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Banner Image Configuration Card */}
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
@@ -623,9 +905,9 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
                       다른 이미지로 변경
                       <input 
                         type="file" 
-                        accept="image/*" 
-                        onChange={handleBannerUpload} 
-                        className="hidden" 
+                        accept="image/*"
+                        onChange={handleBannerUpload}
+                        className="hidden"
                       />
                     </label>
                   </div>
@@ -633,52 +915,20 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
               </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
-              <h4 className="text-sm font-black text-gray-800 mb-2.5 flex items-center gap-1.5">
-                <Database className="w-4 h-4 text-[#2e7d32]" />
-                종합 데이터 상태
-              </h4>
-              <div className="grid grid-cols-2 gap-3 text-center">
-                <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-                  <div className="text-[10px] font-black text-gray-500">총 접수 건수</div>
-                  <div className="text-lg font-black text-gray-800 mt-0.5">{submissions.length}건</div>
-                </div>
-                <div className="bg-amber-50/50 p-2.5 rounded-xl border border-amber-100/40">
-                  <div className="text-[10px] font-black text-amber-700">미동기화 건수</div>
-                  <div className="text-lg font-black text-amber-600 mt-0.5">
-                    {submissions.filter((s) => !s.syncedToSheets || !s.emailSent).length}건
-                  </div>
-                </div>
-              </div>
-
-              {user && submissions.length > 0 && (
-                <button
-                  onClick={handleSyncAll}
-                  disabled={isLoading}
-                  className="w-full mt-3 flex items-center justify-center gap-1.5 bg-[#2e7d32] hover:bg-[#1b5e20] active:scale-98 text-white py-2.5 rounded-xl text-xs font-black shadow-md shadow-[#2e7d32]/10 transition-all cursor-pointer"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                  미처리 내역 전체 동기화 실행
-                </button>
-              )}
-            </div>
-
           </div>
 
-          {/* Right panel: Submissions Table List */}
-          <div className="flex-1 bg-white rounded-2xl border border-gray-100 p-5 shadow-xs flex flex-col min-h-[350px]">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-4 mb-4 shrink-0">
+          {/* Right panel: Submissions List */}
+          <div className="flex-1 bg-white p-5 rounded-2xl border border-gray-100 shadow-xs flex flex-col min-h-[500px]">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-50 pb-4 mb-4 shrink-0">
               <div>
-                <h4 className="text-base font-black text-gray-800 flex items-center gap-1.5">
-                  <Clock className="w-5 h-5 text-[#2e7d32]" />
-                  실시간 예약 신청 목록 ({submissions.length}건)
+                <h4 className="text-sm font-black text-gray-800 flex items-center gap-1.5">
+                  <Database className="w-4 h-4 text-[#2e7d32]" />
+                  실시간 간편 상담 예약 접수 내역
                 </h4>
-                <p className="text-xs text-gray-500 font-medium mt-0.5">
-                  사이트 방문자가 10초 상담을 신청하면 이곳과 서버 데이터베이스에 즉시 업데이트됩니다.
+                <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+                  현재 브라우저 및 클라우드 데이터베이스에 실시간으로 접수된 최신 내역입니다.
                 </p>
               </div>
-              
               <button
                 onClick={fetchAllSubmissions}
                 disabled={isLoading}
@@ -732,59 +982,90 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
                               {sub.notes || <span className="text-gray-300 italic">요청사항 없음</span>}
                             </div>
                           </td>
-                          <td className="py-4 px-4">
+                          <td className="py-4 px-4 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              {/* Google Sheet Sync Control */}
-                              <button
-                                onClick={() => handleSyncToSheet(sub)}
-                                disabled={!user || sub.syncedToSheets}
-                                className={`flex items-center gap-1 text-[11px] font-black px-2.5 py-1.5 rounded-lg border transition-all ${
-                                  sub.syncedToSheets
-                                    ? 'bg-[#e8f5e9] text-[#2e7d32] border-[#a5d6a7]/30'
-                                    : user
-                                    ? 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200 cursor-pointer'
-                                    : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
-                                }`}
-                                title={sub.syncedToSheets ? '동기화 완료' : '구글시트로 동기화'}
-                              >
-                                {sub.syncedToSheets ? (
-                                  <>
-                                    <Check className="w-3 h-3 text-[#2e7d32]" />
-                                    <span>시트완료</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <FileSpreadsheet className="w-3 h-3" />
-                                    <span>시트전송</span>
-                                  </>
-                                )}
-                              </button>
+                              {useAppsScript ? (
+                                /* Google Apps Script mode unified sync button */
+                                <button
+                                  onClick={() => handleManualSyncAppsScript(sub)}
+                                  disabled={sub.syncedToSheets && sub.emailSent}
+                                  className={`flex items-center justify-center gap-1.5 text-[11px] font-black px-4 py-1.5 rounded-lg border transition-all ${
+                                    (sub.syncedToSheets && sub.emailSent)
+                                      ? 'bg-[#e8f5e9] text-[#2e7d32] border-[#a5d6a7]/30'
+                                      : appsScriptUrl
+                                      ? 'bg-[#2e7d32] hover:bg-[#1b5e20] text-white border-[#2e7d32] cursor-pointer shadow-xs active:scale-95'
+                                      : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+                                  }`}
+                                  title={(sub.syncedToSheets && sub.emailSent) ? '동기화 완료' : '구글 시트 & 메일 동시 전송'}
+                                >
+                                  {(sub.syncedToSheets && sub.emailSent) ? (
+                                    <>
+                                      <Check className="w-3.5 h-3.5" />
+                                      <span>전송 완료</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <RefreshCw className="w-3 h-3" />
+                                      <span>구글 전송</span>
+                                    </>
+                                  )}
+                                </button>
+                              ) : (
+                                /* Legacy Google Auth separate sync buttons */
+                                <>
+                                  {/* Google Sheet Sync Control */}
+                                  <button
+                                    onClick={() => handleSyncToSheet(sub)}
+                                    disabled={!user || sub.syncedToSheets}
+                                    className={`flex items-center gap-1 text-[11px] font-black px-2.5 py-1.5 rounded-lg border transition-all ${
+                                      sub.syncedToSheets
+                                        ? 'bg-[#e8f5e9] text-[#2e7d32] border-[#a5d6a7]/30'
+                                        : user
+                                        ? 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200 cursor-pointer'
+                                        : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+                                    }`}
+                                    title={sub.syncedToSheets ? '동기화 완료' : '구글시트로 동기화'}
+                                  >
+                                    {sub.syncedToSheets ? (
+                                      <>
+                                        <Check className="w-3 h-3 text-[#2e7d32]" />
+                                        <span>시트완료</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <FileSpreadsheet className="w-3 h-3" />
+                                        <span>시트전송</span>
+                                      </>
+                                    )}
+                                  </button>
 
-                              {/* Email Send Control */}
-                              <button
-                                onClick={() => handleSendEmail(sub)}
-                                disabled={!user || sub.emailSent}
-                                className={`flex items-center gap-1 text-[11px] font-black px-2.5 py-1.5 rounded-lg border transition-all ${
-                                  sub.emailSent
-                                    ? 'bg-[#e3f2fd] text-[#1565c0] border-[#90caf9]/30'
-                                    : user
-                                    ? 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200 cursor-pointer'
-                                    : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
-                                }`}
-                                title={sub.emailSent ? '메일 전송 완료' : 'nakeunjong@gmail.com으로 전송'}
-                              >
-                                {sub.emailSent ? (
-                                  <>
-                                    <Check className="w-3 h-3 text-[#1565c0]" />
-                                    <span>메일완료</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Mail className="w-3 h-3" />
-                                    <span>메일전송</span>
-                                  </>
-                                )}
-                              </button>
+                                  {/* Email Send Control */}
+                                  <button
+                                    onClick={() => handleSendEmail(sub)}
+                                    disabled={!user || sub.emailSent}
+                                    className={`flex items-center gap-1 text-[11px] font-black px-2.5 py-1.5 rounded-lg border transition-all ${
+                                      sub.emailSent
+                                        ? 'bg-[#e3f2fd] text-[#1565c0] border-[#90caf9]/30'
+                                        : user
+                                        ? 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200 cursor-pointer'
+                                        : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+                                    }`}
+                                    title={sub.emailSent ? '메일 전송 완료' : 'nakeunjong@gmail.com으로 전송'}
+                                  >
+                                    {sub.emailSent ? (
+                                      <>
+                                        <Check className="w-3 h-3 text-[#1565c0]" />
+                                        <span>메일완료</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Mail className="w-3 h-3" />
+                                        <span>메일전송</span>
+                                      </>
+                                    )}
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -795,9 +1076,20 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
               )}
             </div>
 
-            {!user && (
+            {/* Bottom Status Warnings */}
+            {!useAppsScript && !user && (
               <div className="mt-4 bg-gray-50 p-4 rounded-xl border border-gray-100 text-center text-xs text-gray-500 font-medium">
                 🔒 개별 구글시트 전송 및 이메일 전송 기능을 잠금 해제하려면 좌측에서 <strong>Google 계정으로 연동하기</strong>를 완료해 주세요.
+              </div>
+            )}
+            {useAppsScript && !appsScriptUrl && (
+              <div className="mt-4 bg-[#fff9db] p-4 rounded-xl border border-[#ffe066] text-center text-xs text-amber-950 font-medium">
+                ⚠️ 좌측에 있는 <strong>Google Apps Script 웹 앱 URL</strong> 입력란에 주소를 붙여넣어야 실제 구글 시트 및 메일 전송이 작동하기 시작합니다.
+              </div>
+            )}
+            {useAppsScript && appsScriptUrl && (
+              <div className="mt-4 bg-[#f1f8f3] p-4 rounded-xl border border-[#a5d6a7]/40 text-center text-xs text-emerald-950 font-medium">
+                ✅ <strong>구글 앱스 스크립트 모드가 활성화되어 있습니다.</strong> 방문자가 견적 신청 시 자동으로 내 구글 시트에 기록되고 nakeunjong@gmail.com으로 메일 알림이 전송됩니다.
               </div>
             )}
           </div>

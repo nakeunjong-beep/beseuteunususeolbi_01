@@ -329,41 +329,71 @@ export default function App() {
       console.warn('Firestore save failed, relying on LocalStorage backup:', err);
     }
 
-    // 3. Attempt direct background sync if Google user has an active session
-    const token = sessionStorage.getItem('g_access_token');
-    const spreadsheetId = localStorage.getItem('admin_spreadsheet_id');
-    const sheetName = localStorage.getItem('admin_sheet_name') || '예약접수목록';
+    // 3. Attempt direct background sync if Google Apps Script is active, otherwise fallback to legacy Google Auth
+    const useAppsScript = localStorage.getItem('use_apps_script') !== 'false';
+    const appsScriptUrl = localStorage.getItem('apps_script_url') || '';
     
     let syncedToSheets = false;
     let emailSent = false;
 
-    if (token) {
-      // Auto-append to Google Sheet
-      if (spreadsheetId) {
-        try {
-          await appendRowToGoogleSheet(token, spreadsheetId, sheetName, [
-            submission.timestamp,
-            submission.name,
-            submission.phone,
-            submission.service,
-            submission.urgency,
-            submission.notes || '없음'
-          ]);
-          syncedToSheets = true;
-        } catch (err) {
-          console.error('Auto sheets sync failed:', err);
-        }
-      }
-
-      // Auto-send email notification to owner
+    if (useAppsScript && appsScriptUrl) {
       try {
-        await sendGmailNotification(token, 'nakeunjong@gmail.com', {
-          ...submission,
-          id: newDocId || undefined
+        const response = await fetch(appsScriptUrl, {
+          method: 'POST',
+          mode: 'cors',
+          headers: {
+            'Content-Type': 'text/plain', // Avoid preflight CORS trigger in Apps Script
+          },
+          body: JSON.stringify({
+            name: submission.name,
+            phone: submission.phone,
+            service: submission.service,
+            urgency: submission.urgency,
+            notes: submission.notes,
+            timestamp: submission.timestamp
+          })
         });
-        emailSent = true;
+        const resData = await response.json();
+        if (resData.result === 'success') {
+          syncedToSheets = true;
+          emailSent = true;
+        }
       } catch (err) {
-        console.error('Auto Gmail notify failed:', err);
+        console.error('Google Apps Script submission failed, will save locally:', err);
+      }
+    } else {
+      const token = sessionStorage.getItem('g_access_token');
+      const spreadsheetId = localStorage.getItem('admin_spreadsheet_id');
+      const sheetName = localStorage.getItem('admin_sheet_name') || '예약접수목록';
+
+      if (token) {
+        // Auto-append to Google Sheet
+        if (spreadsheetId) {
+          try {
+            await appendRowToGoogleSheet(token, spreadsheetId, sheetName, [
+              submission.timestamp,
+              submission.name,
+              submission.phone,
+              submission.service,
+              submission.urgency,
+              submission.notes || '없음'
+            ]);
+            syncedToSheets = true;
+          } catch (err) {
+            console.error('Auto sheets sync failed:', err);
+          }
+        }
+
+        // Auto-send email notification to owner
+        try {
+          await sendGmailNotification(token, 'nakeunjong@gmail.com', {
+            ...submission,
+            id: newDocId || undefined
+          });
+          emailSent = true;
+        } catch (err) {
+          console.error('Auto Gmail notify failed:', err);
+        }
       }
     }
 
