@@ -38,9 +38,7 @@ import {
   Clock,
   Image,
   Upload,
-  Trash2,
-  Sparkles,
-  Wind
+  Trash2
 } from 'lucide-react';
 
 interface AdminConsoleProps {
@@ -86,10 +84,10 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
     setIsLoading(true);
     try {
       const testData = {
-        name: '테스트(지앤지클린)',
-        phone: '010-2699-0484',
-        service: '입주청소 & 이사청소',
-        urgency: '🚨 당일 긴급 출동 희망 (예상치 못한 가구 오염 등 시급함)',
+        name: '테스트(동해번쩍)',
+        phone: '010-1234-5678',
+        service: '누수 정밀 탐지',
+        urgency: '🚨 매우 긴급 (30분 이내 출동 필요)',
         notes: '이것은 구글 스프레드시트 및 이메일 연동 테스트입니다.',
         timestamp: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) + ' (테스트)'
       };
@@ -498,16 +496,16 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
       <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#0369a1] to-[#0284c7] px-6 py-5 text-white flex justify-between items-center shrink-0">
+        <div className="bg-gradient-to-r from-[#1b4332] to-[#2e7d32] px-6 py-5 text-white flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 bg-white/10 rounded-lg">
-              <Settings className="w-5 h-5 text-sky-200" />
+              <Settings className="w-5 h-5 text-[#a5d6a7]" />
             </div>
             <div>
               <h3 className="font-extrabold text-lg sm:text-xl tracking-tight flex items-center gap-2">
-                지앤지클린 실시간 상담/예약 관리 시스템
+                베스트누수설비 실시간 상담/예약 관리 시스템
               </h3>
-              <p className="text-xs text-sky-200 font-medium mt-0.5">
+              <p className="text-xs text-[#a5d6a7] font-medium mt-0.5">
                 Google Sheets 연동 & nakeunjong@gmail.com 이메일 알림 제어기
               </p>
             </div>
@@ -523,15 +521,15 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
         {/* Status Toast Banner */}
         {statusMessage && (
           <div className={`px-6 py-3 flex items-center gap-2 text-sm font-bold tracking-tight shrink-0 transition-all ${
-            statusMessage.isError ? 'bg-red-50 text-red-700 border-b border-red-100' : 'bg-sky-50 text-sky-800 border-b border-sky-100'
+            statusMessage.isError ? 'bg-red-50 text-red-700 border-b border-red-100' : 'bg-emerald-50 text-emerald-800 border-b border-emerald-100'
           }`}>
-            {statusMessage.isError ? <AlertCircle className="w-4 h-4 text-red-500" /> : <CheckCircle className="w-4 h-4 text-sky-500" />}
+            {statusMessage.isError ? <AlertCircle className="w-4 h-4 text-red-500" /> : <CheckCircle className="w-4 h-4 text-emerald-500" />}
             <span>{statusMessage.text}</span>
           </div>
         )}
 
         {/* Main Body */}
-        <div className="flex-1 overflow-y-auto p-6 bg-slate-50 flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 overflow-y-auto p-6 bg-[#f8faf9] flex flex-col lg:flex-row gap-6">
           
           {/* Left panel: Auth & Spreadsheet Setup */}
           <div className="w-full lg:w-80 flex flex-col gap-5 shrink-0">
@@ -539,7 +537,7 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
             {/* Integration Mode Card */}
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs space-y-4">
               <h4 className="text-sm font-black text-gray-800 flex items-center gap-1.5 border-b border-gray-50 pb-2">
-                <Settings className="w-4 h-4 text-[#0284c7]" />
+                <Settings className="w-4 h-4 text-[#2e7d32]" />
                 연동 엔진 선택
               </h4>
               
@@ -551,7 +549,7 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
                   }}
                   className={`py-2 px-1 text-center text-[11px] font-black rounded-lg transition-all cursor-pointer ${
                     useAppsScript 
-                      ? 'bg-[#0284c7] text-white shadow-xs' 
+                      ? 'bg-[#2e7d32] text-white shadow-xs' 
                       : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >
@@ -564,7 +562,7 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
                   }}
                   className={`py-2 px-1 text-center text-[11px] font-black rounded-lg transition-all cursor-pointer ${
                     !useAppsScript 
-                      ? 'bg-[#0284c7] text-white shadow-xs' 
+                      ? 'bg-[#2e7d32] text-white shadow-xs' 
                       : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >
@@ -578,10 +576,10 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
               <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs space-y-4">
                 <div className="flex justify-between items-center">
                   <h4 className="text-sm font-black text-gray-800 flex items-center gap-1.5">
-                    <FileSpreadsheet className="w-4 h-4 text-[#0284c7]" />
+                    <FileSpreadsheet className="w-4 h-4 text-[#2e7d32]" />
                     앱스 스크립트 연동 정보
                   </h4>
-                  <span className="text-[9px] bg-sky-100 text-sky-800 font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">Free & Simple</span>
+                  <span className="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">Free & Simple</span>
                 </div>
 
                 <div className="space-y-3.5">
@@ -595,14 +593,14 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
                         setAppsScriptUrl(e.target.value);
                         localStorage.setItem('apps_script_url', e.target.value);
                       }}
-                      className="w-full bg-[#fcfcfc] border border-gray-200 focus:border-[#0284c7] focus:ring-2 focus:ring-sky-600/10 rounded-lg px-3 py-2.5 text-xs font-mono outline-none"
+                      className="w-full bg-[#fcfcfc] border border-gray-200 focus:border-[#2e7d32] focus:ring-2 focus:ring-[#2e7d32]/10 rounded-lg px-3 py-2.5 text-xs font-mono outline-none"
                     />
                   </div>
 
                   <button
                     onClick={handleTestAppsScript}
                     disabled={isLoading}
-                    className="w-full flex items-center justify-center gap-1.5 bg-sky-50 hover:bg-sky-100 border border-sky-200/40 text-sky-800 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer"
+                    className="w-full flex items-center justify-center gap-1.5 bg-[#e8f5e9] hover:bg-[#c8e6c9] border border-[#a5d6a7]/40 text-[#1b5e20] py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                     연동 테스트 데이터 1건 전송
@@ -632,7 +630,7 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
     // 2. nakeunjong@gmail.com 메일로 실시간 예약 알림 발송
     MailApp.sendEmail({
       to: "nakeunjong@gmail.com",
-      subject: "[지앤지클린] " + data.name + " 고객님 새 문의 접수!",
+      subject: "[베스트누수설비] " + data.name + " 고객님 새 문의 접수!",
       htmlBody: "<h3>실시간 간편 상담 신청 내역</h3>" +
                 "<p><b>신청시간:</b> " + (data.timestamp || new Date().toLocaleString("ko-KR", {timeZone: "Asia/Seoul"})) + "</p>" +
                 "<p><b>고객성함:</b> " + data.name + "</p>" +
@@ -660,7 +658,7 @@ function doGet(e) {
 }`);
                           alert('앱스 스크립트 코드가 클립보드에 복사되었습니다!');
                         }}
-                        className="text-[10px] text-[#0284c7] hover:underline font-black cursor-pointer bg-sky-50 px-2 py-0.5 rounded"
+                        className="text-[10px] text-[#2e7d32] hover:underline font-black cursor-pointer bg-emerald-50 px-2 py-0.5 rounded"
                       >
                         코드 전체 복사
                       </button>
@@ -682,7 +680,7 @@ function doGet(e) {
     
     MailApp.sendEmail({
       to: "nakeunjong@gmail.com",
-      subject: "[지앤지클린] " + data.name + " 고객님 새 문의 접수!",
+      subject: "[베스트누수설비] " + data.name + " 고객님 새 문의 접수!",
       htmlBody: "<h3>실시간 간편 상담 신청 내역</h3>" +
                 "<p><b>신청시간:</b> " + (data.timestamp || new Date().toLocaleString("ko-KR", {timeZone: "Asia/Seoul"})) + "</p>" +
                 "<p><b>고객성함:</b> " + data.name + "</p>" +
@@ -717,11 +715,12 @@ function doGet(e) {
                     <div>2. 시트의 상단 메뉴에서 <b>확장 프로그램</b> &gt; <b>Apps Script</b>를 클릭합니다.</div>
                     <div>3. 기존에 적혀있는 기본 코드를 모두 지우고 위의 <b>[코드 전체 복사]</b>를 눌러 그대로 붙여넣습니다.</div>
                     <div>4. 우측 상단의 <b>[배포] &gt; [새 배포]</b>를 누릅니다.</div>
-                    <div>5. 설정 항목:</div>
+                    <div>5. 왼쪽 톱니바퀴에서 유형을 <b>[웹 앱]</b>으로 선택합니다.</div>
+                    <div>6. 설정 항목:</div>
                     <div className="pl-3 font-semibold text-gray-700">· 다음 사용자 명의로 실행: <b>나</b></div>
                     <div className="pl-3 font-semibold text-gray-700">· 액세스할 수 있는 사용자: <b>모든 사용자</b></div>
-                    <div>6. 파란색 <b>[배포]</b> 버튼을 누르고, 액세스 승인(내 계정 선택 - 고급 - 안전하지 않음으로 이동 클릭 - 허용)을 완료합니다.</div>
-                    <div>7. 완료 후 발급된 <b>[웹 앱 URL]</b>을 위 입력창에 붙여넣으면 끝입니다!</div>
+                    <div>7. 파란색 <b>[배포]</b> 버튼을 누르고, 액세스 승인(내 계정 선택 - 고급 - 안전하지 않음으로 이동 클릭 - 허용)을 완료합니다.</div>
+                    <div>8. 완료 후 발급된 <b>[웹 앱 URL]</b>을 위 입력창에 붙여넣으면 끝입니다!</div>
                   </div>
 
                 </div>
@@ -732,7 +731,7 @@ function doGet(e) {
                 {/* Account Card */}
                 <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
                   <h4 className="text-sm font-black text-gray-800 mb-3 flex items-center gap-1.5">
-                    <Lock className="w-4 h-4 text-[#0284c7]" />
+                    <Lock className="w-4 h-4 text-[#2e7d32]" />
                     구글 관리자 계정 연동 (구글 로그인)
                   </h4>
                   
@@ -757,15 +756,15 @@ function doGet(e) {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <div className="bg-sky-50 p-3 rounded-xl border border-sky-200/40 flex items-center gap-3">
+                      <div className="bg-[#f1f8f3] p-3 rounded-xl border border-[#a5d6a7]/40 flex items-center gap-3">
                         <img 
                           src={user.photoURL || undefined} 
                           alt="profile" 
-                          className="w-10 h-10 rounded-full border border-sky-200"
+                          className="w-10 h-10 rounded-full border border-[#a5d6a7]"
                           referrerPolicy="no-referrer"
                         />
                         <div className="overflow-hidden">
-                           <div className="font-extrabold text-xs text-[#0369a1] truncate">{user.displayName || '관리자'}</div>
+                          <div className="font-extrabold text-xs text-[#1b4332] truncate">{user.displayName || '관리자'}</div>
                           <div className="text-[10px] text-gray-500 font-mono truncate">{user.email}</div>
                         </div>
                       </div>
@@ -785,7 +784,7 @@ function doGet(e) {
                 {/* Sheets Link Config */}
                 <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
                   <h4 className="text-sm font-black text-gray-800 mb-3 flex items-center gap-1.5">
-                    <FileSpreadsheet className="w-4 h-4 text-[#0284c7]" />
+                    <FileSpreadsheet className="w-4 h-4 text-[#2e7d32]" />
                     구글 스프레드시트 설정
                   </h4>
                   
@@ -800,7 +799,7 @@ function doGet(e) {
                           setSpreadsheetId(e.target.value);
                           localStorage.setItem('admin_spreadsheet_id', e.target.value);
                         }}
-                        className="w-full bg-[#fcfcfc] border border-gray-200 focus:border-[#0284c7] focus:ring-2 focus:ring-sky-600/10 rounded-lg px-3 py-2 text-xs font-mono outline-none"
+                        className="w-full bg-[#fcfcfc] border border-gray-200 focus:border-[#2e7d32] focus:ring-2 focus:ring-[#2e7d32]/10 rounded-lg px-3 py-2 text-xs font-mono outline-none"
                       />
                     </div>
 
@@ -814,7 +813,7 @@ function doGet(e) {
                           setSheetName(e.target.value);
                           localStorage.setItem('admin_sheet_name', e.target.value);
                         }}
-                        className="w-full bg-[#fcfcfc] border border-gray-200 focus:border-[#0284c7] focus:ring-2 focus:ring-sky-600/10 rounded-lg px-3 py-2 text-xs outline-none"
+                        className="w-full bg-[#fcfcfc] border border-gray-200 focus:border-[#2e7d32] focus:ring-2 focus:ring-[#2e7d32]/10 rounded-lg px-3 py-2 text-xs outline-none"
                       />
                     </div>
 
@@ -822,7 +821,7 @@ function doGet(e) {
                       <button
                         onClick={handleCreateSheet}
                         disabled={isLoading}
-                        className="w-full flex items-center justify-center gap-1 bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200/40 py-2 rounded-lg text-xs font-black transition-all cursor-pointer"
+                        className="w-full flex items-center justify-center gap-1 bg-[#e8f5e9] text-[#1b5e20] hover:bg-[#c8e6c9] border border-[#a5d6a7]/40 py-2 rounded-lg text-xs font-black transition-all cursor-pointer"
                       >
                         <FileSpreadsheet className="w-3.5 h-3.5" />
                         새 접수 전용 구글시트 자동생성
@@ -840,7 +839,7 @@ function doGet(e) {
             {/* Banner Image Configuration Card */}
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
               <h4 className="text-sm font-black text-gray-800 mb-3 flex items-center gap-1.5">
-                <Image className="w-4 h-4 text-[#0284c7]" />
+                <Image className="w-4 h-4 text-[#2e7d32]" />
                 실제 배너 이미지 설정
               </h4>
 
@@ -851,9 +850,9 @@ function doGet(e) {
 
                 {/* Upload Area */}
                 {!customBannerImage ? (
-                  <label className="border-2 border-dashed border-sky-100 hover:border-sky-500 hover:bg-sky-50/20 rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all group">
-                    <Upload className="w-6 h-6 text-sky-400 group-hover:text-sky-600 mb-2 transition-colors" />
-                    <span className="text-xs font-black text-sky-800">배너 이미지 업로드</span>
+                  <label className="border-2 border-dashed border-emerald-100 hover:border-emerald-500 hover:bg-emerald-50/20 rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all group">
+                    <Upload className="w-6 h-6 text-emerald-400 group-hover:text-emerald-600 mb-2 transition-colors" />
+                    <span className="text-xs font-black text-emerald-800">배너 이미지 업로드</span>
                     <span className="text-[10px] text-gray-400 mt-1">PNG, JPG, WEBP (최대 2.5MB)</span>
                     <input 
                       type="file" 
@@ -881,15 +880,15 @@ function doGet(e) {
                     </div>
 
                     {/* Toggle Switch to show/hide custom banner */}
-                    <div className="flex items-center justify-between p-2.5 bg-sky-50/50 rounded-xl border border-sky-100/30">
+                    <div className="flex items-center justify-between p-2.5 bg-emerald-50/50 rounded-xl border border-emerald-100/30">
                       <div className="flex flex-col">
-                        <span className="text-xs font-black text-sky-950">실제 이미지 배너 적용</span>
+                        <span className="text-xs font-black text-emerald-950">실제 이미지 배너 적용</span>
                         <span className="text-[9px] text-gray-500">활성화 시 업로드한 이미지가 메인 배너로 보입니다.</span>
                       </div>
                       <button
                         onClick={handleToggleBanner}
                         className={`w-11 h-6 rounded-full p-0.5 transition-colors focus:outline-none ${
-                          showCustomBanner ? 'bg-[#0284c7]' : 'bg-gray-300'
+                          showCustomBanner ? 'bg-[#2e7d32]' : 'bg-gray-300'
                         }`}
                       >
                         <div
@@ -923,7 +922,7 @@ function doGet(e) {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-50 pb-4 mb-4 shrink-0">
               <div>
                 <h4 className="text-sm font-black text-gray-800 flex items-center gap-1.5">
-                  <Database className="w-4 h-4 text-[#0284c7]" />
+                  <Database className="w-4 h-4 text-[#2e7d32]" />
                   실시간 간편 상담 예약 접수 내역
                 </h4>
                 <p className="text-[11px] text-gray-400 font-medium mt-0.5">
@@ -933,7 +932,7 @@ function doGet(e) {
               <button
                 onClick={fetchAllSubmissions}
                 disabled={isLoading}
-                className="flex items-center gap-1 text-xs text-[#0284c7] hover:bg-sky-50 font-bold border border-sky-200/45 px-3 py-1.5 rounded-lg transition-all"
+                className="flex items-center gap-1 text-xs text-[#2e7d32] hover:bg-[#f1f8f3] font-bold border border-[#a5d6a7]/40 px-3 py-1.5 rounded-lg transition-all"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                 목록 새로고침
@@ -952,17 +951,17 @@ function doGet(e) {
                 <div className="space-y-4 min-w-[600px] pr-2">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-[#f8fafc] text-[11px] font-black text-[#0369a1] uppercase tracking-wider border-b border-gray-100">
+                      <tr className="bg-[#f8faf9] text-[11px] font-black text-[#1b4332] uppercase tracking-wider border-b border-gray-100">
                         <th className="py-3 px-4 rounded-l-lg">신청시간</th>
                         <th className="py-3 px-3">고객 인적사항</th>
                         <th className="py-3 px-3">신청 서비스</th>
-                        <th className="py-3 px-3">요청일정 / 특이사항</th>
+                        <th className="py-3 px-3">긴급 여부 / 요청사항</th>
                         <th className="py-3 px-4 text-center rounded-r-lg">수동 동기화 제어</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {submissions.map((sub, index) => (
-                        <tr key={sub.id || index} className="hover:bg-sky-50/10 transition-all">
+                        <tr key={sub.id || index} className="hover:bg-[#fdfdfd]/50 transition-all">
                           <td className="py-4 px-4 text-[11px] text-gray-400 font-mono font-medium">
                             {sub.timestamp}
                           </td>
@@ -971,7 +970,7 @@ function doGet(e) {
                             <div className="text-xs text-gray-500 font-mono font-semibold mt-0.5">{sub.phone}</div>
                           </td>
                           <td className="py-4 px-3">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-[#e0f2fe] text-sky-800 border border-sky-200/20">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-[#e8f5e9] text-[#1b5e20] border border-[#a5d6a7]/20">
                               {sub.service}
                             </span>
                           </td>
@@ -992,9 +991,9 @@ function doGet(e) {
                                   disabled={sub.syncedToSheets && sub.emailSent}
                                   className={`flex items-center justify-center gap-1.5 text-[11px] font-black px-4 py-1.5 rounded-lg border transition-all ${
                                     (sub.syncedToSheets && sub.emailSent)
-                                      ? 'bg-sky-50 text-sky-800 border-sky-200/30'
+                                      ? 'bg-[#e8f5e9] text-[#2e7d32] border-[#a5d6a7]/30'
                                       : appsScriptUrl
-                                      ? 'bg-[#0284c7] hover:bg-sky-800 text-white border-[#0284c7] cursor-pointer shadow-xs active:scale-95'
+                                      ? 'bg-[#2e7d32] hover:bg-[#1b5e20] text-white border-[#2e7d32] cursor-pointer shadow-xs active:scale-95'
                                       : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
                                   }`}
                                   title={(sub.syncedToSheets && sub.emailSent) ? '동기화 완료' : '구글 시트 & 메일 동시 전송'}
@@ -1020,7 +1019,7 @@ function doGet(e) {
                                     disabled={!user || sub.syncedToSheets}
                                     className={`flex items-center gap-1 text-[11px] font-black px-2.5 py-1.5 rounded-lg border transition-all ${
                                       sub.syncedToSheets
-                                        ? 'bg-sky-50 text-sky-800 border-sky-200/30'
+                                        ? 'bg-[#e8f5e9] text-[#2e7d32] border-[#a5d6a7]/30'
                                         : user
                                         ? 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200 cursor-pointer'
                                         : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
@@ -1029,7 +1028,7 @@ function doGet(e) {
                                   >
                                     {sub.syncedToSheets ? (
                                       <>
-                                        <Check className="w-3 h-3 text-[#0284c7]" />
+                                        <Check className="w-3 h-3 text-[#2e7d32]" />
                                         <span>시트완료</span>
                                       </>
                                     ) : (
@@ -1046,7 +1045,7 @@ function doGet(e) {
                                     disabled={!user || sub.emailSent}
                                     className={`flex items-center gap-1 text-[11px] font-black px-2.5 py-1.5 rounded-lg border transition-all ${
                                       sub.emailSent
-                                        ? 'bg-blue-50 text-blue-800 border-blue-200/30'
+                                        ? 'bg-[#e3f2fd] text-[#1565c0] border-[#90caf9]/30'
                                         : user
                                         ? 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200 cursor-pointer'
                                         : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
@@ -1055,7 +1054,7 @@ function doGet(e) {
                                   >
                                     {sub.emailSent ? (
                                       <>
-                                        <Check className="w-3 h-3 text-blue-800" />
+                                        <Check className="w-3 h-3 text-[#1565c0]" />
                                         <span>메일완료</span>
                                       </>
                                     ) : (
@@ -1089,7 +1088,7 @@ function doGet(e) {
               </div>
             )}
             {useAppsScript && appsScriptUrl && (
-              <div className="mt-4 bg-[#f1f8f3] p-4 rounded-xl border border-sky-200/40 text-center text-xs text-sky-950 font-medium">
+              <div className="mt-4 bg-[#f1f8f3] p-4 rounded-xl border border-[#a5d6a7]/40 text-center text-xs text-emerald-950 font-medium">
                 ✅ <strong>구글 앱스 스크립트 모드가 활성화되어 있습니다.</strong> 방문자가 견적 신청 시 자동으로 내 구글 시트에 기록되고 nakeunjong@gmail.com으로 메일 알림이 전송됩니다.
               </div>
             )}
@@ -1100,7 +1099,7 @@ function doGet(e) {
         {/* Footer info */}
         <div className="bg-gray-50 border-t border-gray-100 px-6 py-4 flex flex-col sm:flex-row justify-between items-center text-xs text-gray-400 font-semibold gap-2 shrink-0">
           <span>* 모든 접수 데이터는 브라우저 LocalStorage에 실시간 보안 백업됩니다.</span>
-          <span>지앤지클린 관리자 통합 대시보드 v1.2</span>
+          <span>베스트누수설비 관리자 통합 대시보드 v1.2</span>
         </div>
 
       </div>
