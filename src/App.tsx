@@ -310,9 +310,9 @@ export default function App() {
     let dbSuccess = false;
     let newDocId = '';
 
-    // 2. Try to save to Firestore
+    // 2. Try to save to Firestore with a 2-second timeout to prevent hanging the UI
     try {
-      const docRef = await addDoc(collection(db, 'submissions'), {
+      const firestorePromise = addDoc(collection(db, 'submissions'), {
         name: submission.name,
         phone: submission.phone,
         service: submission.service,
@@ -323,10 +323,16 @@ export default function App() {
         emailSent: false,
         createdAt: new Date()
       });
+
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Firestore operation timed out')), 2000)
+      );
+
+      const docRef = await Promise.race([firestorePromise, timeoutPromise]);
       newDocId = docRef.id;
       dbSuccess = true;
     } catch (err) {
-      console.warn('Firestore save failed, relying on LocalStorage backup:', err);
+      console.warn('Firestore save failed or timed out, relying on LocalStorage backup:', err);
     }
 
     // 3. Attempt direct background sync if Google Apps Script is active, otherwise fallback to legacy Google Auth
@@ -338,7 +344,7 @@ export default function App() {
 
     if (useAppsScript && appsScriptUrl) {
       try {
-        const response = await fetch(appsScriptUrl, {
+        const fetchPromise = fetch(appsScriptUrl, {
           method: 'POST',
           mode: 'cors',
           headers: {
@@ -353,13 +359,19 @@ export default function App() {
             timestamp: submission.timestamp
           })
         });
+
+        const timeoutPromise = new Promise<Response>((_, reject) =>
+          setTimeout(() => reject(new Error('Google Apps Script request timed out')), 5000)
+        );
+
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
         const resData = await response.json();
         if (resData.result === 'success') {
           syncedToSheets = true;
           emailSent = true;
         }
       } catch (err) {
-        console.error('Google Apps Script submission failed, will save locally:', err);
+        console.error('Google Apps Script submission failed or timed out, will save locally:', err);
       }
     } else {
       const token = sessionStorage.getItem('g_access_token');
