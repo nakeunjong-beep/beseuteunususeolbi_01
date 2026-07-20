@@ -635,7 +635,7 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
                 베스트누수설비 실시간 상담/예약 관리 시스템
               </h3>
               <p className="text-xs text-[#a5d6a7] font-medium mt-0.5">
-                Google Sheets 연동 & nakeunjong@gmail.com 이메일 알림 제어기
+                Google Sheets 연동 & 최고 관리자 이메일 알림 제어기
               </p>
             </div>
           </div>
