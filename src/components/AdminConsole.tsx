@@ -681,7 +681,7 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
                   <p className="text-[11px] text-red-750 font-semibold leading-relaxed">
                     현재 계정: <span className="font-mono bg-red-100/60 px-1 py-0.5 rounded">{user.email}</span>
                     <br />
-                    지정된 최고 관리자 이메일(<span className="font-mono text-[#2e7d32] font-black">nakeunjong@gmail.com</span>)로 로그인해야 관리자 모드를 사용할 수 있습니다.
+                    승인된 최고 관리자 구글 계정으로 로그인해야 관리자 모드를 사용할 수 있습니다.
                   </p>
                   <button
                     onClick={handleSignOut}
@@ -707,7 +707,7 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
                     <span>Google 계정으로 관리자 로그인</span>
                   </button>
                   <p className="text-[10px] text-gray-400 font-semibold">
-                    💡 최고 관리자 계정: <strong>nakeunjong@gmail.com</strong>
+                    💡 지정된 관리자 구글 계정으로만 접속이 허용됩니다.
                   </p>
                 </div>
               )}
