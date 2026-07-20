@@ -658,7 +658,63 @@ export default function AdminConsole({ isOpen, onClose }: AdminConsoleProps) {
         )}
 
         {/* Main Body */}
-        <div className="flex-1 overflow-y-auto p-6 bg-[#f8faf9] flex flex-col lg:flex-row gap-6">
+        {(!user || user.email !== 'nakeunjong@gmail.com') ? (
+          <div className="flex-1 overflow-y-auto p-8 bg-gray-50 flex flex-col items-center justify-center min-h-[450px]">
+            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-xl max-w-md w-full text-center space-y-6">
+              <div className="mx-auto w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center shadow-inner">
+                <Lock className="w-8 h-8" />
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="text-lg font-black text-gray-850">최고 관리자 전용 보안 구역</h4>
+                <p className="text-xs text-gray-500 leading-relaxed font-semibold">
+                  본 시스템은 지정된 최고 관리자 외 접근이 철저히 제한됩니다. 계속하려면 구글 계정으로 로그인해 주십시오.
+                </p>
+              </div>
+
+              {user ? (
+                <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-left space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-red-800">
+                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                    <span>접근 권한이 없습니다</span>
+                  </div>
+                  <p className="text-[11px] text-red-750 font-semibold leading-relaxed">
+                    현재 계정: <span className="font-mono bg-red-100/60 px-1 py-0.5 rounded">{user.email}</span>
+                    <br />
+                    지정된 최고 관리자 이메일(<span className="font-mono text-[#2e7d32] font-black">nakeunjong@gmail.com</span>)로 로그인해야 관리자 모드를 사용할 수 있습니다.
+                  </p>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full text-center bg-white hover:bg-gray-100 text-xs font-black py-2.5 rounded-xl border border-gray-200 text-gray-600 transition-all cursor-pointer active:scale-[0.98]"
+                  >
+                    로그아웃 및 계정 전환
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <button
+                    onClick={handleGoogleSignIn}
+                    disabled={isLoading}
+                    className="w-full flex items-center justify-center gap-2.5 bg-[#2e7d32] hover:bg-[#1b5e20] text-white py-3.5 px-4 rounded-2xl text-sm font-black transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    {isLoading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.113-6.887 4.113-4.832 0-8.761-3.93-8.761-8.8s3.93-8.8 8.761-8.8c2.183 0 4.13.788 5.673 2.227l3.232-3.232C18.17.9 15.42 0 12.24 0 5.48 0 0 5.48 0 12.24s5.48 12.24 12.24 12.24c6.88 0 12.24-4.88 12.24-12.24 0-.783-.078-1.547-.216-1.955H12.24z"/>
+                      </svg>
+                    )}
+                    <span>Google 계정으로 관리자 로그인</span>
+                  </button>
+                  <p className="text-[10px] text-gray-400 font-semibold">
+                    💡 최고 관리자 계정: <strong>nakeunjong@gmail.com</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-6 bg-[#f8faf9] flex flex-col lg:flex-row gap-6">
           
           {/* Left panel: Auth & Spreadsheet Setup */}
           <div className="w-full lg:w-80 flex flex-col gap-5 shrink-0">
@@ -1249,6 +1305,7 @@ function doGet(e) {
           </div>
 
         </div>
+        )}
 
         {/* Footer info */}
         <div className="bg-gray-50 border-t border-gray-100 px-6 py-4 flex flex-col sm:flex-row justify-between items-center text-xs text-gray-400 font-semibold gap-2 shrink-0">
