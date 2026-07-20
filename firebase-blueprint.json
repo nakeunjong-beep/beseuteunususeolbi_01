@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "BannerConfig": {
+      "title": "BannerConfig",
+      "description": "Top banner configuration including custom image and toggle state",
+      "type": "object",
+      "properties": {
+        "customBannerImage": {
+          "type": "string",
+          "description": "Base64 compressed image string or image URL"
+        },
+        "showCustomBanner": {
+          "type": "boolean",
+          "description": "Whether to display the custom banner instead of the bento hero"
+        }
+      },
+      "required": ["customBannerImage", "showCustomBanner"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "User consultation and leak plumbing requests",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "service": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "urgency": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "syncedToSheets": {
+          "type": "boolean"
+        },
+        "emailSent": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["name", "phone", "service", "urgency", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/configs/banner": {
+      "schema": "BannerConfig",
+      "description": "Global website top banner toggle and custom image configuration"
+    },
+    "/submissions/{submissionId}": {
+      "schema": "Submission",
+      "description": "Customer booking and inquiry submissions"
+    }
+  }
+}
